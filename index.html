@@ -57,7 +57,7 @@ const FM_API = 'https://stamp.family.com.tw/api/maps/MapProductInfo';
 const RADIUS = 1000; // 其他品牌門市的顯示半徑（公尺）
 // logo 取自各家官網 favicon，商標屬各公司所有
 const BRANDS = {
-  '全家': {logo: 'logos/fm.png'},
+  '全家': {logo: 'logos/fm.png', note: '目前查不到友善食光商品（可能賣完了，或全家資料暫時載入失敗）'},
   '7-11': {logo: 'logos/711.png', note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
   '萊爾富': {logo: 'logos/hilife.png', note: '官方沒有即期品即時庫存。惜福食堂：每日 17:00–23:59 指定鮮食 7 折，以現場為準'},
   'OK': {logo: 'logos/ok.png', note: '官方沒有即期品即時庫存，只能現場碰運氣'},
@@ -101,6 +101,8 @@ function drawFM(stores) {
     const ll = [num(s.latitude), num(s.longitude)];
     const items = info.map(i => `<li><b>${esc(i.name)} ${num(i.qty)}</b><br>` +
       i.categories.flatMap(c => c.products).filter(p => num(p.qty)).map(p => `${esc(p.name)}×${num(p.qty)}`).join('、') + '</li>').join('');
+    // 即時資料蓋掉清單裡同一家店的淡色標記（同店兩份資料座標會差幾公尺）
+    fmStatic.filter(m => map.distance(m.getLatLng(), ll) < 40).forEach(m => layers['全家'].removeLayer(m));
     const icon = qty ? L.divIcon({className: '', html: `<div class="badge"><img src="${BRANDS['全家'].logo}" alt="">${qty}</div>`, iconSize: [50, 24]}) : ICONS['全家'];
     const m = L.marker(ll, {icon, opacity: qty ? 1 : 0.45, zIndexOffset: qty ? 1000 : 0}) // 有貨的壓在最上面
       .bindPopup(`<div class="pop"><h3>${lg('全家')}${esc(s.name)}</h3><p>${esc(s.address)}<br>${Math.round(s.distance)} m · ${hhmm(s.updateDate)} 更新</p>` +
@@ -118,10 +120,12 @@ function drawFM(stores) {
   return `全家 ${inStock} 家有貨、共 ${total} 件`;
 }
 
+let fmStatic = []; // 全家清單畫出的淡色標記，有即時庫存的會被換掉
 function drawStores(c) {
   if (typeof STORES === 'undefined') return '找不到 stores.js，其他超商不會顯示';
   const n = [];
   let px; // 最近的全聯
+  fmStatic = [];
   for (const [b, list] of Object.entries(STORES)) {
     const r = BRANDS[b].radius || RADIUS;
     let k = 0;
@@ -129,12 +133,14 @@ function drawStores(c) {
       const d = map.distance(c, [lat, lng]);
       if (d > r) continue;
       k++;
-      const m = L.marker([lat, lng], {icon: ICONS[b]})
-        .bindPopup(`<div class="pop"><h3>${lg(b)}${b} ${esc(name)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
+      const title = name.includes(b) ? name : `${b} ${name || '（未標店名）'}`;
+      const m = L.marker([lat, lng], {icon: ICONS[b], opacity: b === '全家' ? 0.45 : 1})
+        .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
         .addTo(layers[b]);
+      if (b === '全家') fmStatic.push(m);
       if (b === '全聯' && (!px || d < px.d)) px = {m, d, name};
     }
-    if (k) n.push(`${b}×${k}` + (r === RADIUS ? '' : `（${r / 1000} 公里內）`));
+    if (k && b !== '全家') n.push(`${b}×${k}` + (r === RADIUS ? '' : `（${r / 1000} 公里內）`));
   }
   if (px) { // 全聯比超商稀疏、常在畫面外：最近一家放列表第一列，點了就跳過去
     const li = document.createElement('li');
@@ -145,9 +151,10 @@ function drawStores(c) {
   return `${RADIUS / 1000} 公里內 ` + (n.length ? `${n.join('、')}（沒有公開庫存，點開看怎麼查）` : '沒有其他超商');
 }
 
-let seq = 0;
+let seq = 0, last; // last：上次搜尋的中心
 function load(c, note = '') {
   const my = ++seq; // 使用者又按了一次搜尋時，舊的回應直接丟掉
+  last = c;
   $('list').replaceChildren();
   Object.values(layers).forEach(l => l.clearLayers());
   const st = {note, fm: '全家載入中…', others: drawStores(c)};
@@ -168,6 +175,8 @@ map.on('locationfound', e => {
 map.on('locationerror', () => load(map.getCenter(), '定位失敗（請允許定位權限），改搜地圖中心'));
 $('loc').onclick = () => map.locate({setView: true, maxZoom: 16});
 $('here').onclick = () => load(map.getCenter());
+// 拖完地圖自動搜尋（只聽手動拖曳，點列表跳轉不會觸發而洗掉開著的說明）
+map.on('dragend', () => { if (!last || map.distance(map.getCenter(), last) > 300) load(map.getCenter()); });
 $('loc').onclick();
 </script>
 </body>

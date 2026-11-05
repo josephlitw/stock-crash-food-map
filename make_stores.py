@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """重抓門市座標，輸出 stores.js 給 index.html 用。用法：python3 make_stores.py
 
-7-11、全聯：All The Places（整理自官方門市查詢，CC0）
+全家、7-11、全聯：All The Places（整理自官方門市查詢，CC0）
 萊爾富、OK：官方沒給座標，改用 OpenStreetMap（有漏店）
-全家不用：index.html 直接從全家的即時 API 拿門市和庫存
+全家的庫存另外由 index.html 即時查；這裡的全家清單是讓沒貨的店也能顯示
 """
 import json, re, subprocess, time
 
@@ -33,25 +33,30 @@ def osm():
         except subprocess.CalledProcessError as e:
             print(f'Overpass 失敗（{e.stderr.strip()}），{20 * 2 ** i} 秒後重試', flush=True)
             time.sleep(20 * 2 ** i)
-    print('Overpass 一直失敗：這次先不含萊爾富、OK，晚點再跑一次')
     return []
 
 
-def save(stores):
-    with open('stores.js', 'w', encoding='utf-8') as f:
-        f.write(f'// 由 make_stores.py 產生（All The Places {run} + OpenStreetMap），格式：品牌 → [名稱, 緯度, 經度]\n')
-        f.write('const STORES = ' + json.dumps(stores, ensure_ascii=False, separators=(',', ':')) + ';\n')
-    print('已寫入 stores.js', {b: len(v) for b, v in stores.items()}, flush=True)
-
+try:  # 上一版，Overpass 失敗時沿用裡面的萊爾富、OK
+    s = open('stores.js', encoding='utf-8').read()
+    old = json.loads(s[s.index('{'):s.rindex('}') + 1])
+except (OSError, ValueError):
+    old = {}
 
 run = get('https://data.alltheplaces.xyz/runs/latest.json')['run_id']
-stores = {'7-11': atp(run, 'seven_eleven_tw'), '全聯': atp(run, 'pxmart_tw') + atp(run, 'mega_pxmart_tw'), '萊爾富': [], 'OK': []}
-save(stores)  # 先存一份，Overpass 再慢也不會白跑
-for e in osm():
+stores = {'全家': atp(run, 'familymart_tw'), '7-11': atp(run, 'seven_eleven_tw'),
+          '全聯': atp(run, 'pxmart_tw') + atp(run, 'mega_pxmart_tw'), '萊爾富': [], 'OK': []}
+els = osm()
+for e in els:
     t = e.get('tags', {})
     b = '萊爾富' if re.search('萊爾富|hi-life', t.get('brand', '') + t.get('name', ''), re.I) else 'OK'
     c = e.get('center', e)
     name = t.get('branch') or re.sub('萊爾富|hi-life|ok ?超商|ok ?mart', '', t.get('name', ''), flags=re.I).strip()
     stores[b].append([name, round(c['lat'], 5), round(c['lon'], 5)])
-if stores['萊爾富'] or stores['OK']:
-    save(stores)
+if not els:
+    print('Overpass 一直失敗：萊爾富、OK 沿用上一版')
+    stores['萊爾富'], stores['OK'] = old.get('萊爾富', []), old.get('OK', [])
+
+with open('stores.js', 'w', encoding='utf-8') as f:
+    f.write(f'// 由 make_stores.py 產生（All The Places {run} + OpenStreetMap），格式：品牌 → [名稱, 緯度, 經度]\n')
+    f.write('const STORES = ' + json.dumps(stores, ensure_ascii=False, separators=(',', ':')) + ';\n')
+print('已寫入 stores.js', {b: len(v) for b, v in stores.items()})
