@@ -23,6 +23,9 @@ header button{font:inherit;font-size:13px;font-weight:600;border:0;border-radius
 #map{flex:1;min-height:0}
 .leaflet-tile-pane{filter:grayscale(1) contrast(.9) brightness(1.06)} /* 底圖調成淡灰，logo 才跳得出來 */
 #list{flex:none;max-height:30dvh;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid #e5e7eb}
+.tabs{display:flex;flex:none;border-top:1px solid #e5e7eb;background:#fff}
+.tabs a{flex:1;padding:9px 4px;text-align:center;font-size:13px;font-weight:600;color:#6b7280;text-decoration:none}
+.tabs a.on{color:#14532d;box-shadow:inset 0 2px #14532d}
 footer{flex:none;padding:3px 12px calc(3px + env(safe-area-inset-bottom));font-size:10.5px;color:#888;background:#fff;border-top:1px solid #f0f0f0}
 #list:empty{display:none}
 #list li{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:14px}
@@ -47,6 +50,7 @@ footer{flex:none;padding:3px 12px calc(3px + env(safe-area-inset-bottom));font-s
 <div id="status">定位中…</div>
 <div id="map"></div>
 <ul id="list"></ul>
+<nav class="tabs"><a href="index.html" class="on">🗺️ 地圖</a><a href="times.html">⏰ 台股進場時間點供餐</a></nav>
 <footer>非任何超商官方，商標屬各公司所有；權利人來信要求即移除 · <a href="https://forms.gle/jfMyHiuh2kVS1suAA" target="_blank" rel="noopener">聯絡我</a></footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <!-- ponytail: 其他四家門市是靜態清單（make_stores.py 產生），開關店會漏，偶爾重跑一次就好 -->
