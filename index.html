@@ -57,7 +57,7 @@ footer{flex:none;padding:3px 12px calc(3px + env(safe-area-inset-bottom));font-s
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <!-- ponytail: 其他四家門市是靜態清單（make_stores.py 產生），開關店會漏，偶爾重跑一次就好 -->
 <!-- 網域上的靜態檔會被瀏覽器快取 4 小時：stores.js 有更新就改這個版本號 -->
-<script src="stores.js?v=20261105b"></script>
+<script src="stores.js?v=20261105c"></script>
 <script>
 // 全家 App「友善食光地圖」背後的非公開 API：不用登入、允許跨網域，但隨時可能改
 const FM_API = 'https://stamp.family.com.tw/api/maps/MapProductInfo';
@@ -65,10 +65,10 @@ const RADIUS = 1000; // 其他品牌門市的顯示半徑（公尺）
 // logo 取自各家官網 favicon，商標屬各公司所有
 const BRANDS = {
   '全家': {logo: 'logos/fm.png', note: '目前查不到友善食光商品（可能賣完了，或全家資料暫時載入失敗）'},
-  '7-11': {logo: 'logos/711.png', app: {name: 'OPENPOINT', ios: 'https://apps.apple.com/tw/app/id1014238801', android: 'https://play.google.com/store/apps/details?id=tw.net.pic.m.openpoint'}, note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
+  '7-11': {logo: 'logos/711.png', app: {name: 'OPENPOINT', ios: 'https://apps.apple.com/tw/app/id1014238801', android: 'https://play.google.com/store/apps/details?id=tw.net.pic.m.openpoint'}, note: '庫存要在 OPENPOINT App 裡查：登入後點「服務」→「i地圖」→「i珍食」（網頁拿不到）'},
   '萊爾富': {logo: 'logos/hilife.png', note: '官方沒有即期品即時庫存。惜福食堂：每日 17:00–23:59 指定鮮食 7 折，以現場為準'},
   'OK': {logo: 'logos/ok.png', note: '「午後6折惜食光」16:30 起，官方沒有即時庫存，只能現場碰運氣'},
-  '全聯': {logo: 'logos/px.png', radius: 3000, app: {name: '全聯', ios: 'https://apps.apple.com/tw/app/id432477263', android: 'https://play.google.com/store/apps/details?id=com.pxmart.android'}, note: '即期生鮮庫存請開「全聯福利中心」App（原 PX Pay）→「惜食地圖」（要登入，網頁拿不到）'},
+  '全聯': {logo: 'logos/px.png', radius: 3000, app: {name: '全聯', ios: 'https://apps.apple.com/tw/app/id432477263', android: 'https://play.google.com/store/apps/details?id=com.pxmart.android'}, note: '庫存要在全聯 App 裡查：登入後點「我的」→「惜食地圖」，每天 18:00 起（網頁拿不到）'},
 };
 
 const $ = id => document.getElementById(id);
@@ -142,13 +142,13 @@ function drawStores(c) {
   for (const [b, list] of Object.entries(STORES)) {
     const r = BRANDS[b].radius || RADIUS;
     let k = 0;
-    for (const [name, lat, lng] of list) {
+    for (const [name, lat, lng, tel] of list) {
       const d = map.distance(c, [lat, lng]);
       if (d > r) continue;
       k++;
       const title = name.includes(b) ? name : `${b} ${name || '（未標店名）'}`;
       const m = L.marker([lat, lng], {icon: ICONS[b], opacity: b === '全家' ? 0.4 : 1})
-        .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${appBtn(b)}${nav(lat, lng)}</div>`)
+        .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${appBtn(b)}${tel ? `<a href="tel:${esc(tel)}">打電話問 ${esc(tel)}</a> · ` : ''}${nav(lat, lng)}</div>`)
         .addTo(layers[b]);
       if (b === '全家') fmStatic.push(m);
       if (b === '全聯' && (!px || d < px.d)) px = {m, d, name};

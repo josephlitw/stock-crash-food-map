@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""重抓萊爾富門市並補上官方店名，寫回 stores.js。用法：python3 name_hilife.py
+"""重抓萊爾富門市並補上官方店名和電話，寫回 stores.js（格式：[名稱, 緯度, 經度, 電話?]）。用法：python3 name_hilife.py
 
 1. 萊爾富官網門市查詢的公開清單：每家店的官方店名＋地址（沒有座標）
 2. OpenStreetMap 的萊爾富點位：有座標，但約四分之一沒有店名
@@ -47,7 +47,7 @@ def official_list():
     shops = []
     for c in curl(*hdr, '-d', '{}', f'{API}/DistrictList/GetDistrictList')['Entries']:
         body = json.dumps({'City_Id': c['city_id'], 'Town_Id': '', 'Shop_Id': '', 'Services': [], 'Shop_Name': ''})
-        shops += [{'id': e['shop_id'], 'name': e['shop_name'], 'adr': e['shop_adr']}
+        shops += [{'id': e['shop_id'], 'name': e['shop_name'], 'adr': e['shop_adr'], 'tel': (e.get('shop_tel') or '').strip()}
                   for e in curl(*hdr, '-d', body, f'{API}/ShopServices/GetShopServices')['Entries']]
         time.sleep(0.5)
     os.remove(jar)
@@ -97,7 +97,8 @@ def main():
         if hit:
             used.add(hit['id'])
         name = hit['name'] if hit else t.get('branch') or re.sub(r'萊爾富|hi-?life', '', t.get('name', ''), flags=re.I).strip()
-        out.append([name, round(c['lat'], 5), round(c['lon'], 5)])
+        tel = hit['tel'] if hit else re.sub(r'^\+886[\s-]*', '0', (t.get('phone') or t.get('contact:phone') or '').split(';')[0]).strip()
+        out.append([name, round(c['lat'], 5), round(c['lon'], 5)] + ([tel] if tel else []))
 
     cache_path = '.hilife_reverse.json'
     cache = json.load(open(cache_path, encoding='utf-8')) if os.path.exists(cache_path) else {}
@@ -109,6 +110,8 @@ def main():
         cands = [o for o in by_road.get((dist, road), []) if o['id'] not in used]
         if len(cands) == 1:
             used.add(cands[0]['id']); p[0] = cands[0]['name']
+            if cands[0]['tel']:
+                p[3:] = [cands[0]['tel']]
         elif road:
             p[0] = f'（{dist}{road}）'
     json.dump(cache, open(cache_path, 'w', encoding='utf-8'), ensure_ascii=False)
