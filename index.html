@@ -22,7 +22,8 @@ h1 small{display:block;font-size:12px;font-weight:400;opacity:.85}
 header button{font:inherit;font-size:14px;font-weight:600;border:0;border-radius:999px;padding:8px 12px;background:#fff;color:#14532d;cursor:pointer;white-space:nowrap}
 #status{padding:6px 12px;font-size:13px;background:#f3f4f6;border-bottom:1px solid #e5e7eb}
 #map{flex:1;min-height:0}
-#list{flex:none;max-height:32dvh;overflow:auto;margin:0;padding:0 0 env(safe-area-inset-bottom);list-style:none;border-top:1px solid #e5e7eb}
+#list{flex:none;max-height:32dvh;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid #e5e7eb}
+footer{flex:none;padding:4px 12px calc(4px + env(safe-area-inset-bottom));font-size:11px;color:#666;background:#f9fafb;border-top:1px solid #e5e7eb}
 #list:empty{display:none}
 #list li{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}
 #list li span:first-child{flex:1}
@@ -46,6 +47,7 @@ header button{font:inherit;font-size:14px;font-weight:600;border:0;border-radius
 <div id="status">定位中…</div>
 <div id="map"></div>
 <ul id="list"></ul>
+<footer>非任何超商官方，商標屬各公司所有。任何超商或權利人來信要求，將立即移除相關內容：<a href="https://github.com/josephlitw/stock-crash-food-map/issues" target="_blank" rel="noopener">聯絡我</a></footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <!-- ponytail: 其他四家門市是靜態清單（make_stores.py 產生），開關店會漏，偶爾重跑一次就好 -->
 <script src="stores.js"></script>
@@ -72,7 +74,6 @@ for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [2
 
 const map = L.map('map').setView([25.0478, 121.517], 16); // 定位失敗時停在台北車站
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap 貢獻者'}).addTo(map);
-map.attributionControl.addAttribution('商標屬各公司所有');
 const ctl = L.control.layers(null, null, {position: 'topright'}).addTo(map);
 const layers = {};
 for (const b in BRANDS) {
