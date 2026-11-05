@@ -61,7 +61,7 @@ const BRANDS = {
   '7-11': {logo: 'logos/711.png', note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
   '萊爾富': {logo: 'logos/hilife.png', note: '官方沒有即期品即時庫存。惜福食堂：每日 17:00–23:59 指定鮮食 7 折，以現場為準'},
   'OK': {logo: 'logos/ok.png', note: '官方沒有即期品即時庫存，只能現場碰運氣'},
-  '全聯': {logo: 'logos/px.png', note: '即期生鮮庫存請開 PX Pay App →「惜食地圖」（要登入，網頁拿不到）'},
+  '全聯': {logo: 'logos/px.png', radius: 3000, note: '即期生鮮庫存請開「全聯福利中心」App（原 PX Pay）→「惜食地圖」（要登入，網頁拿不到）'},
 };
 
 const $ = id => document.getElementById(id);
@@ -120,14 +120,26 @@ function drawFM(stores) {
 function drawStores(c) {
   if (typeof STORES === 'undefined') return '找不到 stores.js，其他超商不會顯示';
   const n = [];
+  let px; // 最近的全聯
   for (const [b, list] of Object.entries(STORES)) {
-    const near = list.filter(([, lat, lng]) => map.distance(c, [lat, lng]) <= RADIUS);
-    for (const [name, lat, lng] of near) {
-      L.marker([lat, lng], {icon: ICONS[b]})
-        .bindPopup(`<div class="pop"><h3>${lg(b)}${b} ${esc(name)}</h3><p>${Math.round(map.distance(c, [lat, lng]))} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
+    const r = BRANDS[b].radius || RADIUS;
+    let k = 0;
+    for (const [name, lat, lng] of list) {
+      const d = map.distance(c, [lat, lng]);
+      if (d > r) continue;
+      k++;
+      const m = L.marker([lat, lng], {icon: ICONS[b]})
+        .bindPopup(`<div class="pop"><h3>${lg(b)}${b} ${esc(name)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
         .addTo(layers[b]);
+      if (b === '全聯' && (!px || d < px.d)) px = {m, d, name};
     }
-    if (near.length) n.push(`${b}×${near.length}`);
+    if (k) n.push(`${b}×${k}` + (r === RADIUS ? '' : `（${r / 1000} 公里內）`));
+  }
+  if (px) { // 全聯比超商稀疏、常在畫面外：最近一家放列表第一列，點了就跳過去
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${lg('全聯')}最近的全聯：${esc(px.name)}<br><small>${Math.round(px.d)} m · 惜食庫存請開全聯 App 的惜食地圖</small></span>`;
+    li.onclick = () => { map.setView(px.m.getLatLng(), 17); px.m.openPopup(); };
+    $('list').prepend(li);
   }
   return `${RADIUS / 1000} 公里內 ` + (n.length ? `${n.join('、')}（沒有公開庫存，點開看怎麼查）` : '沒有其他超商');
 }
