@@ -41,7 +41,7 @@ footer{flex:none;padding:4px 12px calc(4px + env(safe-area-inset-bottom));font-s
 <body>
 <header>
   <h1>📉 台股大跌美食地圖<small>全家即時庫存＋7-11／萊爾富／OK／全聯門市</small></h1>
-  <button id="loc" title="定位到我">📍</button>
+  <button id="loc">📍 我附近</button>
   <button id="here">搜尋這一區</button>
 </header>
 <div id="status">定位中…</div>
@@ -165,7 +165,7 @@ map.on('locationfound', e => {
   me = L.circleMarker(e.latlng, {radius: 8, color: '#fff', weight: 3, fillColor: '#111', fillOpacity: 1, interactive: false}).addTo(map);
   load(e.latlng);
 });
-map.on('locationerror', () => load(map.getCenter(), '定位失敗，改搜地圖中心'));
+map.on('locationerror', () => load(map.getCenter(), '定位失敗（請允許定位權限），改搜地圖中心'));
 $('loc').onclick = () => map.locate({setView: true, maxZoom: 16});
 $('here').onclick = () => load(map.getCenter());
 $('loc').onclick();
