@@ -22,7 +22,6 @@ h1{flex:1;margin:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overfl
 header button{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:999px;padding:6px 11px;background:#fff;color:#14532d;cursor:pointer;white-space:nowrap}
 #status{padding:5px 12px;font-size:12.5px;color:#374151;background:#fff;border-bottom:1px solid #e5e7eb}
 #map{flex:1;min-height:0}
-.leaflet-tile-pane{filter:grayscale(1) contrast(.9) brightness(1.06)} /* 底圖調成淡灰，logo 才跳得出來 */
 #list{flex:none;max-height:30dvh;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid #e5e7eb}
 .tabs{display:flex;flex:none;border-top:1px solid #e5e7eb;background:#fff}
 .tabs a{flex:1;padding:9px 4px;text-align:center;font-size:13px;font-weight:600;color:#6b7280;text-decoration:none}
@@ -79,7 +78,8 @@ const ICONS = {};
 for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [18, 18], className: 'logo'});
 
 const map = L.map('map').setView([25.0478, 121.517], 16); // 定位失敗時停在台北車站
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap 貢獻者'}).addTo(map);
+// 底圖用 Esri 淡灰畫布：只留主要路名，沒有門牌、巷弄編號和雜亂圖示（原生最大 16 級，再放大用縮放）
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, maxZoom: 19, attribution: 'Tiles © Esri｜門市資料 © OpenStreetMap 貢獻者'}).addTo(map);
 const ctl = L.control.layers(null, null, {position: 'topright'}).addTo(map);
 const layers = {};
 for (const b in BRANDS) {
