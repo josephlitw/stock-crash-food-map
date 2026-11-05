@@ -55,6 +55,10 @@ for e in els:
 if not els:
     print('Overpass 一直失敗：萊爾富、OK 沿用上一版')
     stores['萊爾富'], stores['OK'] = old.get('萊爾富', []), old.get('OK', [])
+# ponytail: 萊爾富店名是另外用官方清單配對補上的（name_hilife.py），這裡沿用上一版免得被洗回 OSM 的空白店名；
+# 要更新萊爾富門市就先跑這支、再跑 name_hilife.py
+if old.get('萊爾富'):
+    stores['萊爾富'] = old['萊爾富']
 
 with open('stores.js', 'w', encoding='utf-8') as f:
     f.write(f'// 由 make_stores.py 產生（All The Places {run} + OpenStreetMap），格式：品牌 → [名稱, 緯度, 經度]\n')
