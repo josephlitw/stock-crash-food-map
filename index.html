@@ -39,6 +39,7 @@ footer{flex:none;padding:3px 12px calc(3px + env(safe-area-inset-bottom));font-s
 .lg{width:16px;height:16px;border-radius:3px;vertical-align:-3px;margin-right:4px}
 .pop h3{margin:0 0 2px;font-size:15px}
 .pop p{margin:0 0 6px;font-size:12px;color:#555}
+.leaflet-container a.appbtn{display:inline-block;margin:0 8px 6px 0;padding:5px 12px;border-radius:999px;background:#14532d;color:#fff;font-size:12px;font-weight:600;text-decoration:none}
 .pop ul{margin:0 0 6px;padding-left:16px;max-height:38vh;overflow:auto;font-size:13px}
 </style>
 </head>
@@ -63,10 +64,10 @@ const RADIUS = 1000; // 其他品牌門市的顯示半徑（公尺）
 // logo 取自各家官網 favicon，商標屬各公司所有
 const BRANDS = {
   '全家': {logo: 'logos/fm.png', note: '目前查不到友善食光商品（可能賣完了，或全家資料暫時載入失敗）'},
-  '7-11': {logo: 'logos/711.png', note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
+  '7-11': {logo: 'logos/711.png', app: {name: 'OPENPOINT', ios: 'https://apps.apple.com/tw/app/id1014238801', android: 'https://play.google.com/store/apps/details?id=tw.net.pic.m.openpoint'}, note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
   '萊爾富': {logo: 'logos/hilife.png', note: '官方沒有即期品即時庫存。惜福食堂：每日 17:00–23:59 指定鮮食 7 折，以現場為準'},
   'OK': {logo: 'logos/ok.png', note: '「午後6折惜食光」16:30 起，官方沒有即時庫存，只能現場碰運氣'},
-  '全聯': {logo: 'logos/px.png', radius: 3000, note: '即期生鮮庫存請開「全聯福利中心」App（原 PX Pay）→「惜食地圖」（要登入，網頁拿不到）'},
+  '全聯': {logo: 'logos/px.png', radius: 3000, app: {name: '全聯', ios: 'https://apps.apple.com/tw/app/id432477263', android: 'https://play.google.com/store/apps/details?id=com.pxmart.android'}, note: '即期生鮮庫存請開「全聯福利中心」App（原 PX Pay）→「惜食地圖」（要登入，網頁拿不到）'},
 };
 
 const $ = id => document.getElementById(id);
@@ -75,6 +76,8 @@ const num = x => Number(x) || 0; // 外部 API 的數字一律轉成數字，避
 const hhmm = d => d ? new Date(d).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit', hour12: false}) : '?';
 const nav = (lat, lng) => `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noopener">導航</a>`;
 const lg = b => `<img class="lg" src="${BRANDS[b].logo}" alt="">`;
+// 官方 App 按鈕：iPhone 開 App Store、Android 開 Google Play（已安裝的話商店頁可直接「開啟」）
+const appBtn = b => { const a = BRANDS[b].app; return a ? `<a class="appbtn" href="${/android/i.test(navigator.userAgent) ? a.android : a.ios}" target="_blank" rel="noopener">打開 ${a.name} App</a>` : ''; };
 const ICONS = {};
 for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [18, 18], className: 'logo'});
 
@@ -144,7 +147,7 @@ function drawStores(c) {
       k++;
       const title = name.includes(b) ? name : `${b} ${name || '（未標店名）'}`;
       const m = L.marker([lat, lng], {icon: ICONS[b], opacity: b === '全家' ? 0.4 : 1})
-        .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
+        .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${appBtn(b)}${nav(lat, lng)}</div>`)
         .addTo(layers[b]);
       if (b === '全家') fmStatic.push(m);
       if (b === '全聯' && (!px || d < px.d)) px = {m, d, name};
