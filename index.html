@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>台股大跌美食地圖</title>
+<meta name="description" content="全家友善食光即時庫存＋7-11／萊爾富／OK／全聯門市地圖">
+<meta name="robots" content="noindex"><!-- 只給知道連結的人看，不讓搜尋引擎收錄 -->
+<!-- ponytail: 沒有 manifest / service worker，「加入主畫面」靠這幾行就夠；要離線或安裝提示再補 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="台股大跌美食地圖">
+<meta name="theme-color" content="#14532d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%89%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+html,body{margin:0;height:100%}
+body{display:flex;flex-direction:column;height:100dvh;font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:#111;background:#fff}
+header{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:#14532d;color:#fff}
+h1{flex:1;margin:0;font-size:17px}
+h1 small{display:block;font-size:12px;font-weight:400;opacity:.85}
+header button{font:inherit;font-size:14px;font-weight:600;border:0;border-radius:999px;padding:8px 12px;background:#fff;color:#14532d;cursor:pointer;white-space:nowrap}
+#status{padding:6px 12px;font-size:13px;background:#f3f4f6;border-bottom:1px solid #e5e7eb}
+#map{flex:1;min-height:0}
+#list{flex:none;max-height:32dvh;overflow:auto;margin:0;padding:0 0 env(safe-area-inset-bottom);list-style:none;border-top:1px solid #e5e7eb}
+#list:empty{display:none}
+#list li{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+#list li span:first-child{flex:1}
+#list small{color:#666}
+.qty{background:#16a34a;color:#fff;font-weight:700;border-radius:999px;padding:0 9px}
+.badge{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;height:100%;box-sizing:border-box;border:2px solid #fff;border-radius:999px;background:#16a34a;color:#fff;font-size:12px;font-weight:700;box-shadow:0 1px 4px #0006}
+.badge img{width:16px;height:16px;border-radius:3px;background:#fff}
+.logo{border-radius:5px;background:#fff;box-shadow:0 0 0 2px #fff,0 1px 4px #0008}
+.lg{width:16px;height:16px;border-radius:3px;vertical-align:-3px;margin-right:4px}
+.pop h3{margin:0 0 2px;font-size:15px}
+.pop p{margin:0 0 6px;font-size:12px;color:#555}
+.pop ul{margin:0 0 6px;padding-left:16px;max-height:38vh;overflow:auto;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📉 台股大跌美食地圖<small>全家即時庫存＋7-11／萊爾富／OK／全聯門市</small></h1>
+  <button id="loc" title="定位到我">📍</button>
+  <button id="here">搜尋這一區</button>
+</header>
+<div id="status">定位中…</div>
+<div id="map"></div>
+<ul id="list"></ul>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- ponytail: 其他四家門市是靜態清單（make_stores.py 產生），開關店會漏，偶爾重跑一次就好 -->
+<script src="stores.js"></script>
+<script>
+// 全家 App「友善食光地圖」背後的非公開 API：不用登入、允許跨網域，但隨時可能改
+const FM_API = 'https://stamp.family.com.tw/api/maps/MapProductInfo';
+const RADIUS = 1000; // 其他品牌門市的顯示半徑（公尺）
+// logo 取自各家官網 favicon，商標屬各公司所有
+const BRANDS = {
+  '全家': {logo: 'logos/fm.png'},
+  '7-11': {logo: 'logos/711.png', note: '即時庫存請開 OPENPOINT App →「i珍食」（要會員登入，網頁拿不到）'},
+  '萊爾富': {logo: 'logos/hilife.png', note: '官方沒有即期品即時庫存。惜福食堂：每日 17:00–23:59 指定鮮食 7 折，以現場為準'},
+  'OK': {logo: 'logos/ok.png', note: '官方沒有即期品即時庫存，只能現場碰運氣'},
+  '全聯': {logo: 'logos/px.png', note: '即期生鮮庫存請開 PX Pay App →「惜食地圖」（要登入，網頁拿不到）'},
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => `&#${ch.charCodeAt(0)};`);
+const hhmm = d => d ? new Date(d).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit', hour12: false}) : '?';
+const nav = (lat, lng) => `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noopener">導航</a>`;
+const lg = b => `<img class="lg" src="${BRANDS[b].logo}" alt="">`;
+const ICONS = {};
+for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [20, 20], className: 'logo'});
+
+const map = L.map('map').setView([25.0478, 121.517], 16); // 定位失敗時停在台北車站
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap 貢獻者'}).addTo(map);
+map.attributionControl.addAttribution('商標屬各公司所有');
+const ctl = L.control.layers(null, null, {position: 'topright'}).addTo(map);
+const layers = {};
+for (const b in BRANDS) {
+  layers[b] = L.layerGroup().addTo(map);
+  ctl.addOverlay(layers[b], lg(b) + b);
+}
+
+async function getFM(c) {
+  const r = await fetch(FM_API, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json;charset=utf-8'},
+    body: JSON.stringify({ProjectCode: '202106302', OldPKeys: [], PostInfo: '', Latitude: c.lat, Longitude: c.lng}),
+  });
+  const j = await r.json();
+  if (j.code !== 1) throw Error(j.message || `code ${j.code}`);
+  return j.data;
+}
+
+function drawFM(stores) {
+  let inStock = 0, total = 0;
+  for (const s of stores) {
+    const info = (s.info || []).filter(i => i.qty);
+    const qty = info.reduce((n, i) => n + i.qty, 0);
+    const ll = [s.latitude, s.longitude];
+    const items = info.map(i => `<li><b>${esc(i.name)} ${i.qty}</b><br>` +
+      i.categories.flatMap(c => c.products).filter(p => p.qty).map(p => `${esc(p.name)}×${p.qty}`).join('、') + '</li>').join('');
+    const icon = qty ? L.divIcon({className: '', html: `<div class="badge"><img src="${BRANDS['全家'].logo}" alt="">${qty}</div>`, iconSize: [50, 24]}) : ICONS['全家'];
+    const m = L.marker(ll, {icon, opacity: qty ? 1 : 0.45, zIndexOffset: qty ? 1000 : 0}) // 有貨的壓在最上面
+      .bindPopup(`<div class="pop"><h3>${lg('全家')}${esc(s.name)}</h3><p>${esc(s.address)}<br>${Math.round(s.distance)} m · ${hhmm(s.updateDate)} 更新</p>` +
+        (qty ? `<ul>${items}</ul>` : '<p>目前沒有友善食光商品</p>') +
+        `<a href="tel:${esc(s.tel)}">打電話問</a> · ${nav(...ll)}</div>`)
+      .addTo(layers['全家']);
+    if (!qty) continue;
+    inStock++;
+    total += qty;
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${esc(s.name)}<br><small>${Math.round(s.distance)} m · ${esc(info.map(i => i.name).join('、'))}</small></span><span class="qty">${qty}</span>`;
+    li.onclick = () => { map.setView(ll, 17); m.openPopup(); };
+    $('list').append(li);
+  }
+  return `全家 ${inStock} 家有貨、共 ${total} 件`;
+}
+
+function drawStores(c) {
+  if (typeof STORES === 'undefined') return '找不到 stores.js，其他超商不會顯示';
+  const n = [];
+  for (const [b, list] of Object.entries(STORES)) {
+    const near = list.filter(([, lat, lng]) => map.distance(c, [lat, lng]) <= RADIUS);
+    for (const [name, lat, lng] of near) {
+      L.marker([lat, lng], {icon: ICONS[b]})
+        .bindPopup(`<div class="pop"><h3>${lg(b)}${b} ${esc(name)}</h3><p>${Math.round(map.distance(c, [lat, lng]))} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
+        .addTo(layers[b]);
+    }
+    if (near.length) n.push(`${b}×${near.length}`);
+  }
+  return `${RADIUS / 1000} 公里內 ` + (n.length ? `${n.join('、')}（沒有公開庫存，點開看怎麼查）` : '沒有其他超商');
+}
+
+let seq = 0;
+function load(c, note = '') {
+  const my = ++seq; // 使用者又按了一次搜尋時，舊的回應直接丟掉
+  $('list').replaceChildren();
+  Object.values(layers).forEach(l => l.clearLayers());
+  const st = {note, fm: '全家載入中…', others: drawStores(c)};
+  const show = () => { if (my === seq) $('status').textContent = Object.values(st).filter(Boolean).join('｜'); };
+  show();
+  getFM(c)
+    .then(d => { if (my === seq) st.fm = drawFM(d); })
+    .catch(e => { st.fm = `全家資料載入失敗（${e.message}）`; }) // 也接住 API 改格式造成的錯
+    .finally(show);
+}
+
+let me;
+map.on('locationfound', e => {
+  me?.remove();
+  me = L.circleMarker(e.latlng, {radius: 8, color: '#fff', weight: 3, fillColor: '#111', fillOpacity: 1, interactive: false}).addTo(map);
+  load(e.latlng);
+});
+map.on('locationerror', () => load(map.getCenter(), '定位失敗，改搜地圖中心'));
+$('loc').onclick = () => map.locate({setView: true, maxZoom: 16});
+$('here').onclick = () => load(map.getCenter());
+$('loc').onclick();
+</script>
+</body>
+</html>
