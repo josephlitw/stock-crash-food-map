@@ -66,6 +66,7 @@ const BRANDS = {
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => `&#${ch.charCodeAt(0)};`);
+const num = x => Number(x) || 0; // 外部 API 的數字一律轉成數字，避免被塞進 HTML
 const hhmm = d => d ? new Date(d).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit', hour12: false}) : '?';
 const nav = (lat, lng) => `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noopener">導航</a>`;
 const lg = b => `<img class="lg" src="${BRANDS[b].logo}" alt="">`;
@@ -95,11 +96,11 @@ async function getFM(c) {
 function drawFM(stores) {
   let inStock = 0, total = 0;
   for (const s of stores) {
-    const info = (s.info || []).filter(i => i.qty);
-    const qty = info.reduce((n, i) => n + i.qty, 0);
-    const ll = [s.latitude, s.longitude];
-    const items = info.map(i => `<li><b>${esc(i.name)} ${i.qty}</b><br>` +
-      i.categories.flatMap(c => c.products).filter(p => p.qty).map(p => `${esc(p.name)}×${p.qty}`).join('、') + '</li>').join('');
+    const info = (s.info || []).filter(i => num(i.qty));
+    const qty = info.reduce((n, i) => n + num(i.qty), 0);
+    const ll = [num(s.latitude), num(s.longitude)];
+    const items = info.map(i => `<li><b>${esc(i.name)} ${num(i.qty)}</b><br>` +
+      i.categories.flatMap(c => c.products).filter(p => num(p.qty)).map(p => `${esc(p.name)}×${num(p.qty)}`).join('、') + '</li>').join('');
     const icon = qty ? L.divIcon({className: '', html: `<div class="badge"><img src="${BRANDS['全家'].logo}" alt="">${qty}</div>`, iconSize: [50, 24]}) : ICONS['全家'];
     const m = L.marker(ll, {icon, opacity: qty ? 1 : 0.45, zIndexOffset: qty ? 1000 : 0}) // 有貨的壓在最上面
       .bindPopup(`<div class="pop"><h3>${lg('全家')}${esc(s.name)}</h3><p>${esc(s.address)}<br>${Math.round(s.distance)} m · ${hhmm(s.updateDate)} 更新</p>` +
