@@ -16,22 +16,22 @@
 <style>
 html,body{margin:0;height:100%}
 body{display:flex;flex-direction:column;height:100dvh;font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;color:#111;background:#fff}
-header{display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:#14532d;color:#fff}
-h1{flex:1;margin:0;font-size:17px}
-h1 small{display:block;font-size:12px;font-weight:400;opacity:.85}
-header button{font:inherit;font-size:14px;font-weight:600;border:0;border-radius:999px;padding:8px 12px;background:#fff;color:#14532d;cursor:pointer;white-space:nowrap}
-#status{padding:6px 12px;font-size:13px;background:#f3f4f6;border-bottom:1px solid #e5e7eb}
+header{display:flex;align-items:center;gap:6px;padding:calc(7px + env(safe-area-inset-top)) 10px 7px 12px;background:#14532d;color:#fff}
+h1{flex:1;margin:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:999px;padding:6px 11px;background:#fff;color:#14532d;cursor:pointer;white-space:nowrap}
+#status{padding:5px 12px;font-size:12.5px;color:#374151;background:#fff;border-bottom:1px solid #e5e7eb}
 #map{flex:1;min-height:0}
-#list{flex:none;max-height:32dvh;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid #e5e7eb}
-footer{flex:none;padding:4px 12px calc(4px + env(safe-area-inset-bottom));font-size:11px;color:#666;background:#f9fafb;border-top:1px solid #e5e7eb}
+.leaflet-tile-pane{filter:grayscale(1) contrast(.9) brightness(1.06)} /* 底圖調成淡灰，logo 才跳得出來 */
+#list{flex:none;max-height:30dvh;overflow:auto;margin:0;padding:0;list-style:none;border-top:1px solid #e5e7eb}
+footer{flex:none;padding:3px 12px calc(3px + env(safe-area-inset-bottom));font-size:10.5px;color:#888;background:#fff;border-top:1px solid #f0f0f0}
 #list:empty{display:none}
-#list li{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+#list li{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:14px}
 #list li span:first-child{flex:1}
-#list small{color:#666}
+#list small{color:#6b7280;font-size:12px}
 .qty{background:#16a34a;color:#fff;font-weight:700;border-radius:999px;padding:0 9px}
 .badge{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;height:100%;box-sizing:border-box;border:2px solid #fff;border-radius:999px;background:#16a34a;color:#fff;font-size:12px;font-weight:700;box-shadow:0 1px 4px #0006}
 .badge img{width:16px;height:16px;border-radius:3px;background:#fff}
-.logo{border-radius:5px;background:#fff;box-shadow:0 0 0 2px #fff,0 1px 4px #0008}
+.logo{border-radius:4px;background:#fff;box-shadow:0 0 0 1.5px #fff,0 1px 3px #0006}
 .lg{width:16px;height:16px;border-radius:3px;vertical-align:-3px;margin-right:4px}
 .pop h3{margin:0 0 2px;font-size:15px}
 .pop p{margin:0 0 6px;font-size:12px;color:#555}
@@ -40,14 +40,14 @@ footer{flex:none;padding:4px 12px calc(4px + env(safe-area-inset-bottom));font-s
 </head>
 <body>
 <header>
-  <h1>📉 台股大跌美食地圖<small>全家即時庫存＋7-11／萊爾富／OK／全聯門市</small></h1>
+  <h1>📉 台股大跌美食地圖</h1>
   <button id="loc">📍 我附近</button>
-  <button id="here">搜尋這一區</button>
+  <button id="here">↻ 更新</button>
 </header>
 <div id="status">定位中…</div>
 <div id="map"></div>
 <ul id="list"></ul>
-<footer>非任何超商官方，商標屬各公司所有。任何超商或權利人來信要求，將立即移除相關內容：<a href="https://forms.gle/jfMyHiuh2kVS1suAA" target="_blank" rel="noopener">聯絡我</a></footer>
+<footer>非任何超商官方，商標屬各公司所有；權利人來信要求即移除 · <a href="https://forms.gle/jfMyHiuh2kVS1suAA" target="_blank" rel="noopener">聯絡我</a></footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <!-- ponytail: 其他四家門市是靜態清單（make_stores.py 產生），開關店會漏，偶爾重跑一次就好 -->
 <script src="stores.js"></script>
@@ -71,7 +71,7 @@ const hhmm = d => d ? new Date(d).toLocaleTimeString('zh-TW', {hour: '2-digit', 
 const nav = (lat, lng) => `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noopener">導航</a>`;
 const lg = b => `<img class="lg" src="${BRANDS[b].logo}" alt="">`;
 const ICONS = {};
-for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [20, 20], className: 'logo'});
+for (const b in BRANDS) ICONS[b] = L.icon({iconUrl: BRANDS[b].logo, iconSize: [18, 18], className: 'logo'});
 
 const map = L.map('map').setView([25.0478, 121.517], 16); // 定位失敗時停在台北車站
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '© OpenStreetMap 貢獻者'}).addTo(map);
@@ -104,7 +104,7 @@ function drawFM(stores) {
     // 即時資料蓋掉清單裡同一家店的淡色標記（同店兩份資料座標會差幾公尺）
     fmStatic.filter(m => map.distance(m.getLatLng(), ll) < 40).forEach(m => layers['全家'].removeLayer(m));
     const icon = qty ? L.divIcon({className: '', html: `<div class="badge"><img src="${BRANDS['全家'].logo}" alt="">${qty}</div>`, iconSize: [50, 24]}) : ICONS['全家'];
-    const m = L.marker(ll, {icon, opacity: qty ? 1 : 0.45, zIndexOffset: qty ? 1000 : 0}) // 有貨的壓在最上面
+    const m = L.marker(ll, {icon, opacity: qty ? 1 : 0.4, zIndexOffset: qty ? 1000 : 0}) // 有貨的壓在最上面
       .bindPopup(`<div class="pop"><h3>${lg('全家')}${esc(s.name)}</h3><p>${esc(s.address)}<br>${Math.round(s.distance)} m · ${hhmm(s.updateDate)} 更新</p>` +
         (qty ? `<ul>${items}</ul>` : '<p>目前沒有友善食光商品</p>') +
         `<a href="tel:${esc(s.tel)}">打電話問</a> · ${nav(...ll)}</div>`)
@@ -117,7 +117,7 @@ function drawFM(stores) {
     li.onclick = () => { map.setView(ll, 17); m.openPopup(); };
     $('list').append(li);
   }
-  return `全家 ${inStock} 家有貨、共 ${total} 件`;
+  return `全家 ${inStock} 家有貨・${total} 件`;
 }
 
 let fmStatic = []; // 全家清單畫出的淡色標記，有即時庫存的會被換掉
@@ -134,21 +134,21 @@ function drawStores(c) {
       if (d > r) continue;
       k++;
       const title = name.includes(b) ? name : `${b} ${name || '（未標店名）'}`;
-      const m = L.marker([lat, lng], {icon: ICONS[b], opacity: b === '全家' ? 0.45 : 1})
+      const m = L.marker([lat, lng], {icon: ICONS[b], opacity: b === '全家' ? 0.4 : 1})
         .bindPopup(`<div class="pop"><h3>${lg(b)}${esc(title)}</h3><p>${Math.round(d)} m</p><p>${BRANDS[b].note}</p>${nav(lat, lng)}</div>`)
         .addTo(layers[b]);
       if (b === '全家') fmStatic.push(m);
       if (b === '全聯' && (!px || d < px.d)) px = {m, d, name};
     }
-    if (k && b !== '全家') n.push(`${b}×${k}` + (r === RADIUS ? '' : `（${r / 1000} 公里內）`));
+    if (k && b !== '全家') n.push(`${b} ${k}`);
   }
   if (px) { // 全聯比超商稀疏、常在畫面外：最近一家放列表第一列，點了就跳過去
     const li = document.createElement('li');
-    li.innerHTML = `<span>${lg('全聯')}最近的全聯：${esc(px.name)}<br><small>${Math.round(px.d)} m · 惜食庫存請開全聯 App 的惜食地圖</small></span>`;
+    li.innerHTML = `<span>${lg('全聯')}最近的全聯：${esc(px.name)}</span><small>${Math.round(px.d)} m</small>`;
     li.onclick = () => { map.setView(px.m.getLatLng(), 17); px.m.openPopup(); };
     $('list').prepend(li);
   }
-  return `${RADIUS / 1000} 公里內 ` + (n.length ? `${n.join('、')}（沒有公開庫存，點開看怎麼查）` : '沒有其他超商');
+  return n.length ? `附近 ${n.join('・')}` : '附近沒有其他超商';
 }
 
 let seq = 0, last; // last：上次搜尋的中心
@@ -172,7 +172,7 @@ map.on('locationfound', e => {
   me = L.circleMarker(e.latlng, {radius: 8, color: '#fff', weight: 3, fillColor: '#111', fillOpacity: 1, interactive: false}).addTo(map);
   load(e.latlng);
 });
-map.on('locationerror', () => load(map.getCenter(), '定位失敗（請允許定位權限），改搜地圖中心'));
+map.on('locationerror', () => load(map.getCenter(), '定位失敗，請允許定位權限'));
 $('loc').onclick = () => map.locate({setView: true, maxZoom: 16});
 $('here').onclick = () => load(map.getCenter());
 // 拖完地圖自動搜尋（只聽手動拖曳，點列表跳轉不會觸發而洗掉開著的說明）
